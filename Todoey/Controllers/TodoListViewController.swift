@@ -7,10 +7,12 @@
 //
 
 import UIKit
+import CoreData
 
 class TodoListViewController: UITableViewController {
 
     var itemArray = [Item]()
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
     
@@ -57,9 +59,9 @@ class TodoListViewController: UITableViewController {
         let alert = UIAlertController(title: "Add new todoey item", message: "", preferredStyle: .alert)
         
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
-            let newItem = Item()
+            let newItem = Item(context: self.context)
             newItem.title = textField.text!
-            
+            newItem.done = false
             self.itemArray.append(newItem)
             
             self.saveItems()
@@ -78,26 +80,21 @@ class TodoListViewController: UITableViewController {
     }
     
     func saveItems(){
-        let encoder = PropertyListEncoder()
-        
         do{
-            let data = try encoder.encode(itemArray)
-            try data.write(to: dataFilePath!)
+            try context.save()
         }catch{
-            print("Error")
+            print("Error saving context \(error)")
         }
         
         self.tableView.reloadData()
     }
     
     func loadItems(){
-        if let data = try? Data(contentsOf: dataFilePath!){
-            let decoder = PropertyListDecoder()
-            do{
-                itemArray = try decoder.decode([Item].self, from: data)
-            } catch{
-                print("Error decoding item array, \(error)")
-            }
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        do{
+            itemArray = try context.fetch(request)
+        }catch{
+            print("Error fecthing data from context \(error)")
         }
     }
     
